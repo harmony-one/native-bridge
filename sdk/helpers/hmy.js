@@ -1,23 +1,33 @@
 const config = require('../config')
 
 const bip39 = require("bip39");
-const hdkey = require("ethereumjs-wallet/hdkey");
-
-const Tx = require('ethereumjs-tx');
-const Web3 = require('web3');
 
 const abiDecoder = require('abi-decoder');
 abiDecoder.addABI(config.erc20ABI);
 
-const CONTRACT_MANAGER = process.env.ERC20_CONTRACT_MANAGER
+// import or require Harmony class
+const { Harmony } = require('@harmony-js/core');
 
-const ETH_TX_GAS_PRICE_GWEI = process.env.ETH_TX_GAS_PRICE_GWEI
-const ETH_TX_GAS_LIMIT = process.env.ETH_TX_GAS_LIMIT
+// import or require settings
+const { ChainID, ChainType } = require('@harmony-js/utils');
 
-// set transactionConfirmationBlocks: https://github.com/trufflesuite/ganache-cli/issues/644
-const web3 = new Web3(new Web3.providers.HttpProvider(config.provider), null, { transactionConfirmationBlocks: 1 });
+const URL_TESTNET = `https://api.s0.b.hmny.io`;
+const URL_MAINNET = `https://api.s0.t.hmny.io`;
 
-const eth = {
+// 1. initialize the Harmony instance
+
+const harmony = new Harmony(
+  // rpc url
+  URL_MAINNET,
+  {
+    // chainType set to Harmony
+    chainType: ChainType.Harmony,
+    // chainType set to HmyLocal
+    chainId: ChainID.HmyMainnet,
+  },
+);
+
+const hmy = {
   createAccount(callback) {
     let account = web3.eth.accounts.create()
     callback(null, account)
@@ -176,62 +186,73 @@ const eth = {
   },
 
   async sendErc20Transaction(contractAddress, privateKey, from, to, amount, earlyRet, callback) {
-    const sendAmount = web3.utils.toWei(amount.toString(), 'ether')
-    const consumerContract = new web3.eth.Contract(config.erc20ABI, contractAddress);
-    const myData = consumerContract.methods.transfer(to, sendAmount).encodeABI();
-
-    const gasLimit = ETH_TX_GAS_LIMIT;
-
-    const nonce = await web3.eth.getTransactionCount(from, 'pending');
-    let gasPrice = await web3.eth.getGasPrice();
-    gasPrice = Math.min(ETH_TX_GAS_PRICE_GWEI * 1e9, gasPrice * 2)  // speed up erc20 txn a bit
-
-    const tx = {
-      from,
-      to: contractAddress,
-
-      gasPrice: web3.utils.toHex(gasPrice),
-      gasLimit: web3.utils.toHex(gasLimit),
-      value: '0x0',
-
-      chainId: 1,
-      nonce: nonce,
-      data: myData
-    }
-
-    console.log('Sending ERC20 transaction', tx);
-
-    const rawTx = new Tx.Transaction(tx, { chain: 'mainnet', hardfork: 'petersburg' });
-    const privKey = Buffer.from(privateKey, 'hex');
-    rawTx.sign(privKey);
-
-    const serializedTx = rawTx.serialize();
-    const tx_hash = '0x' + rawTx.hash().toString('hex');
-
-    console.log(`Attempting to send signed tx ${tx_hash}: ${serializedTx.toString('hex')}\n------------------------`);
-
     let retry = 0;
+    let callbackCalled = false;
+
     while (true) {
+      const sendAmount = web3.utils.toWei(amount.toString(), 'ether')
+      const consumerContract = new web3.eth.Contract(config.erc20ABI, contractAddress);
+      const myData = consumerContract.methods.transfer(to, sendAmount).encodeABI();
+
+      const gasLimit = ETH_TX_GAS_LIMIT;
+
+      const nonce = await web3.eth.getTransactionCount(from, 'pending');
+      let gasPrice = await web3.eth.getGasPrice();
+      gasPrice = Math.max(ETH_TX_GAS_PRICE_GWEI * 1e9, gasPrice * 2 * (retry+1))  // speed up erc20 txn a bit
+
+      const tx = {
+        from,
+        to: contractAddress,
+
+        gasPrice: web3.utils.toHex(gasPrice),
+        gasLimit: web3.utils.toHex(gasLimit),
+        value: '0x0',
+
+        chainId: 1,
+        nonce: nonce,
+        data: myData
+      }
+
+      console.log(`Sending ERC20 transaction (retry num: ${retry})`, tx);
+
+      const rawTx = new Tx.Transaction(tx, { chain: 'mainnet', hardfork: 'petersburg' });
+      const privKey = Buffer.from(privateKey, 'hex');
+      rawTx.sign(privKey);
+
+      const serializedTx = rawTx.serialize();
+      const tx_hash = '0x' + rawTx.hash().toString('hex');
+
+      console.log(`Attempting to send signed tx ${tx_hash}: ${serializedTx.toString('hex')}\n------------------------`);
+
       try {
         const receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex')).
           on('transactionHash', txHash => {
             console.log('transactionHash:', txHash)
             if (earlyRet) {
               console.log('sendErc20Transaction: early returning with transactionHash', txHash)
-              callback(null, txHash)
+              if (!callbackCalled) {
+                callback(null, txHash)
+                callbackCalled = true
+              }
               return null, txHash
             }
           });
 
         // not early return since we await above (tx hash callback should be called before receipt is available)
         console.log('sendErc20Transaction: transaction receipt', receipt)
-        callback(null, receipt.transactionHash)
+        if (!callbackCalled) {
+          callback(null, receipt.transactionHash)
+          callbackCalled = true
+        }
         return null, receipt.transactionHash
       } catch (err) {
         console.error('[Error] sendErc20Transaction', err)
         if (retry == 2) {
-          callback(err)
-          return err, null
+          if (!callbackCalled) {
+            callback(err)
+            callbackCalled = true
+          }
+          return err, tx_hash
         } else {
           retry++;
           console.log(`Retrying erc20 tx... ${retry}`)
@@ -242,60 +263,70 @@ const eth = {
   },
 
   async fundEthForGasFee(privateKey, from, to, amount, message, earlyRet, callback) {
-    const sendAmount = web3.utils.toWei(amount.toString(), 'ether')
-
-    const gasLimit = ETH_TX_GAS_LIMIT;
-
-    const nonce = await web3.eth.getTransactionCount(from, 'pending');
-    const gasPrice = await web3.eth.getGasPrice();
-
-    const tx = {
-      from,
-      to,
-
-      gasPrice: web3.utils.toHex(gasPrice),
-      gasLimit: web3.utils.toHex(gasLimit),
-      value: web3.utils.toHex(sendAmount),
-
-      chainId: 1,
-      nonce: nonce,
-    }
-    if (message) {
-      tx.data = web3.utils.toHex(message);
-    }
-
-    console.log('Sending ETH transaction', tx);
-
-    const rawTx = new Tx.Transaction(tx, { chain: 'mainnet', hardfork: 'petersburg' });
-    const privKey = Buffer.from(privateKey, 'hex');
-    rawTx.sign(privKey);
-    const serializedTx = rawTx.serialize();
-    const tx_hash = '0x' + rawTx.hash().toString('hex');
-
-    console.log(`Attempting to send signed tx ${tx_hash}: ${serializedTx.toString('hex')}\n------------------------`);
-
     let retry = 0;
+    let callbackCalled = false;
+
     while (true) {
+      const sendAmount = web3.utils.toWei(amount.toString(), 'ether')
+
+      const gasLimit = ETH_TX_GAS_LIMIT;
+
+      const nonce = await web3.eth.getTransactionCount(from, 'pending');
+      const gasPrice = await web3.eth.getGasPrice();
+
+      const tx = {
+        from,
+        to,
+
+        gasPrice: web3.utils.toHex(gasPrice),
+        gasLimit: web3.utils.toHex(gasLimit),
+        value: web3.utils.toHex(sendAmount),
+
+        chainId: 1,
+        nonce: nonce,
+      }
+      if (message) {
+        tx.data = web3.utils.toHex(message);
+      }
+
+      console.log(`Sending ETH transaction (retry num: ${retry})`, tx);
+
+      const rawTx = new Tx.Transaction(tx, { chain: 'mainnet', hardfork: 'petersburg' });
+      const privKey = Buffer.from(privateKey, 'hex');
+      rawTx.sign(privKey);
+      const serializedTx = rawTx.serialize();
+      const tx_hash = '0x' + rawTx.hash().toString('hex');
+
+      console.log(`Attempting to send signed tx ${tx_hash}: ${serializedTx.toString('hex')}\n------------------------`);
+
       try {
         const receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex')).
           on('transactionHash', txHash => {
             console.log('transactionHash:', txHash)
             if (earlyRet) {
               console.log('fundEthForGasFee: early returning with transactionHash', txHash)
-              callback(null, txHash)
+              if (!callbackCalled) {
+                callback(null, txHash)
+                callbackCalled = true
+              }
               return null, txHash
             }
           });
 
         // not early return since we await above (tx hash callback should be called before receipt is available)
         console.log('fundEthForGasFee: transaction receipt', receipt)
-        callback(null, receipt.transactionHash)
+        if (!callbackCalled) {
+          callback(null, receipt.transactionHash)
+          callbackCalled = true
+        }
         return null, receipt.transactionHash
       } catch (err) {
-        console.error('[Error] fundEthForGasFee', err)
         if (retry == 2) {
-          callback(err)
-          return err, null
+          if (!callbackCalled) {
+            callback(err)
+            callbackCalled = true
+          }
+          return err, tx_hash
         } else {
           retry++;
           console.log(`Retrying funding eth gas ... ${retry}`)
@@ -323,49 +354,4 @@ const eth = {
   }
 }
 
-if (process.env.RUN) {
-
-  const contractAddress = '0x799a4202c12ca952cb311598a024c80ed371a41e';
-  const privateKey = ''
-  const from = ''
-  const to = ''
-  const amount = 0.01
-  const address = ''
-
-  // eth.getTransactionsForAddress(contractAddress, address, (err, events) => {
-  //   console.log('returned events', JSON.stringify(events));
-  // })
-
-  // eth.fundEthForGasFee(privateKey, from, to, amount, null, (err, hash) => {
-  //   if (err) {
-  //     console.error(err);
-  //     return;
-  //   }
-  //   console.log(hash);
-  //   return hash;
-  // })
-
-  web3.eth.getBalance(from).then((ethBalance) => {
-    console.log(`==== Eth balance: ${web3.utils.fromWei(ethBalance)} ETH`);
-
-    eth.getERC20Balance(from, contractAddress, (err, balance) => {
-      if (err) {
-        console.error(err)
-        return
-      }
-      console.log(`==== One balance: ${balance} ONE`);
-
-      eth.sendErc20Transaction(contractAddress, privateKey, from, to, amount, false /* earlyRet */, (err, hash) => {
-        if (err) {
-          console.error(err);
-          return;
-        }
-        console.log(`==== ONE ERC20 Tx hash: ${hash}`);
-        return ethBalance, balance, hash;
-      })
-    })
-  })
-
-}
-
-module.exports = eth
+module.exports = hmy

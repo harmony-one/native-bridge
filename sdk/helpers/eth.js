@@ -237,7 +237,7 @@ const eth = {
         return null, receipt.transactionHash
       } catch (err) {
         console.error('[Error] sendErc20Transaction', err)
-        if (retry == 3) {
+        if (retry == 2) {
           if (!callbackCalled) {
             callback(err)
             callbackCalled = true
@@ -311,7 +311,7 @@ const eth = {
         }
         return null, receipt.transactionHash
       } catch (err) {
-        if (retry == 3) {
+        if (retry == 2) {
           if (!callbackCalled) {
             callback(err)
             callbackCalled = true
