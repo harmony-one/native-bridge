@@ -1,0 +1,26 @@
+{
+  "name": "harmony-binance",
+  "version": "0.0.1",
+  "description": "Token swap utility for Harmony to Binance Chain",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "dennis@harmony.one",
+  "license": "MIT",
+  "dependencies": {
+    "@binance-chain/javascript-sdk": "^2.16.1",
+    "abi-decoder": "^2.2.2",
+    "async": "^3.1.0",
+    "axios": "^0.18.1",
+    "csv-parser": "^2.3.2",
+    "dotenv": "^8.2.0",
+    "ethereumjs-tx": "^2.1.1",
+    "ethereumjs-wallet": "^0.6.3",
+    "fs": "0.0.1-security",
+    "node-pty": "^0.8.1",
+    "pg-promise": "^8.7.5",
+    "promise.series": "^0.2.0",
+    "web3": "1.0.0-beta.53"
+  }
+}

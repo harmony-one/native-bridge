@@ -1,0 +1,30 @@
+# IdeaIDE
+.idea
+
+#VsIDE
+.vscode
+
+# Executables
+*.pyc
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Mac
+.DS_Store
+*.swp
+
+cli/node-binary
+accounts/
+sdk/sql/db_dump.sql
+
+# etherscan data exports
+processing/exports
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

@@ -1,0 +1,48 @@
+{
+  "name": "api.bnbridge.exchange",
+  "version": "0.0.1",
+  "description": "Token swap utility for Harmony to Binance Chain",
+  "main": "index.js",
+  "scripts": {
+    "start": "API_PORT=5000 pm2 start api.bnbridge.exchange.js --name 'sdk_prod'",
+    "dev": "API_PORT=$API_DEV_PORT pm2 start api.bnbridge.exchange.js --name 'sdk_dev' --watch --ignore-watch='node_modules'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "dennis@harmony.one",
+  "license": "MIT",
+  "dependencies": {
+    "@binance-chain/javascript-sdk": "^2.16.1",
+    "abi-decoder": "^2.2.2",
+    "async": "^2.6.3",
+    "axios": "^0.18.1",
+    "bip39": "^3.0.2",
+    "compression": "^1.7.4",
+    "crypto": "^1.0.1",
+    "crypto-browserify": "^3.12.0",
+    "dotenv": "^8.2.0",
+    "ethereumjs-tx": "^2.1.1",
+    "ethereumjs-wallet": "^0.6.3",
+    "execa": "^1.0.0",
+    "express": "^4.17.1",
+    "generate-password": "^1.4.2",
+    "helmet": "^3.21.2",
+    "http-auth": "^3.2.4",
+    "https": "^1.0.0",
+    "morgan": "^1.9.1",
+    "node-pty": "^0.8.1",
+    "node-rest-client-promise": "^3.1.1",
+    "nodemailer": "^6.3.1",
+    "path": "^0.12.7",
+    "pg-promise": "^8.7.5",
+    "promise.series": "^0.2.0",
+    "sha256": "^0.2.0",
+    "web3": "^1.2.2",
+    "web3-eth": "^1.2.2",
+    "web3-utils": "^1.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.4",
+    "pm2": "^3.5.1",
+    "yargs": "^14.2.0"
+  }
+}
