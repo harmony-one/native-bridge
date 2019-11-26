@@ -142,9 +142,7 @@ class Controller extends Component {
     return (
       <React.Fragment>
         <Tabs value={tabValue} onChange={this.handleChange} className={ classes.tabs } variant="fullWidth" indicatorColor="primary" textColor="inherit">
-          <Tab label="Swap" />
-          {/* <Tab label="List" />
-          <Tab label="Issue" /> */}
+          <Tab style={{fontSize: '20px'}} label="Swap" />
         </Tabs>
         {tabValue === 0 && <Swap onIssue={ this.onIssue } showError={ this.showError } onCreateAccount={ this.onCreateAccount } />}
         {tabValue === 1 && <List onIssue={ this.onIssue } showError={ this.showError } />}

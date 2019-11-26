@@ -104,7 +104,8 @@ const styles = theme => ({
     verticalAlign: 'middle'
   },
   swapDirection: {
-    margin: '14px 12px 18px 12px'
+    margin: '14px 12px 18px 12px',
+    textAlign: 'center'
   },
   gridClick: {
     cursor: 'pointer'
@@ -551,7 +552,7 @@ class Swap extends Component {
                 <Input
                   id='ethReceiveAddress'
                   fullWidth={ true }
-                  label="Your ETH address (to receive ERC20 ONE tokens)"
+                  label="Your ONE address (to receive native ONE tokens)"
                   placeholder="eg: 0x0dE0BCb0703ff8F1aEb8C892eDbE692683bD8030"
                   value={ ethReceiveAddress }
                   error={ ethReceiveAddressError }
@@ -697,10 +698,10 @@ class Swap extends Component {
     } = this.state
 
     let first = 'Binance'
-    let second = 'Ethereum'
+    let second = 'Harmony'
 
     if(swapDirection === 'EthereumToBinance') {
-      first = 'Ethereum'
+      first = 'Harmony'
       second = 'Binance'
     }
 
@@ -716,7 +717,7 @@ class Swap extends Component {
 
     return (
       <React.Fragment>
-        <Label label={'Swap direction'} overridestyle={{ marginTop: '12px', marginBottom: '12px' }} />
+        <Label label={'Swap direction'} overridestyle={{ marginTop: '10px', marginBottom: '12px' }} />
         <Grid item xs={ 5 } onClick={ this.onSwapDirectionClick } className={ classes.gridClick } >
           <div className={ classes.icon }>
             <img
@@ -726,7 +727,7 @@ class Swap extends Component {
             />
           </div>
           <div className={ classes.iconName }>
-            <Typography  variant='h5'>{ first ==='Binance' ? 'BEP2' : 'ERC20' }</Typography>
+            <Typography  variant='h5'>{ first ==='Binance' ? 'BEP2' : 'ONE' }</Typography>
           </div>
         </Grid>
         <Grid item xs={2} onClick={ this.onSwapDirectionClick } className={ classes.gridClick }>
@@ -741,7 +742,7 @@ class Swap extends Component {
             />
           </div>
           <div className={ classes.iconName }>
-            <Typography  variant='h5'>{ second ==='Binance' ? 'BEP2' : 'ERC20' }</Typography>
+            <Typography  variant='h5'>{ second ==='Binance' ? 'BEP2' : 'ONE' }</Typography>
           </div>
         </Grid>
       </React.Fragment>
