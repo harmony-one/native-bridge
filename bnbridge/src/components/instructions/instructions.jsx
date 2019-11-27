@@ -17,14 +17,14 @@ const store = Store.store
 
 const styles = theme => ({
   root: {
-    width: '400px',
+    width: '525px',
     marginBottom: '24px'
   },
   header: {
     fontSize: '2.4rem',
     color: colors.yellow,
     marginBottom: '24px',
-    fontWeight: 400,
+    fontWeight: 700,
     fontFamily: ['Source Sans Pro', 'sans-serif'].join(","),
   },
   action: {
@@ -119,7 +119,7 @@ class Instructions extends Component {
         <Grid style={{ display: 'table', }} item xs={12} align='left'>
           <div style={{ display: 'table', }} className={classes.root} >
             <Typography className={classes.header} style={{ marginTop: '8rem' }}>With bnbridge you can:</Typography>
-            <li><Typography className={classes.action}>Swap between ERC20 and BEP2 tokens</Typography></li>
+            <li><Typography className={classes.action}>Swap from BEP2 to native ONE</Typography></li>
               <div style={{  margin: '30px', marginTop: '50px' }} />
               <Typography className={classes.action2}>
                 Please contact <a href="mailto:hello@harmony.one" target="_blank" rel="noopener noreferrer">Harmony team</a> for any additional support
@@ -128,15 +128,6 @@ class Instructions extends Component {
               Note: UI of this page is not optimized for mobile experience.
             </Typography>
           </div>
-          {/* <div className={ classes.root } >
-            <Typography className={ classes.header }>Bnbridge fees:</Typography>
-              <Grid
-                container
-                justify="flex-start"
-                alignItems="flex-end">
-                { this.renderFees() }
-            </Grid>
-          </div> */}
         </Grid>
       </Grid>
     )

@@ -20,19 +20,19 @@ function App() {
       <CssBaseline />
       <Grid
         style={{
-          padding: '5% 30% 5% 10%',
+          padding: '5% 20% 5% 10%',
           minWidth: 'fit-content',
-          marginLeft: '10%',
+          marginLeft: '7%',
         }}
         container
         justify="space-evenly"
         alignItems="center"
         direction="row"
         >
-        <Grid item style={{ padding: '0% 3%', display: 'table', }} align='center' xs={6}>
+        <Grid item style={{display: 'table'}} align='center' xs={6}>
           <Instructions />
         </Grid>
-        <Grid item style={{ padding: '0% 3%', display: 'table', }} align="center" xs={6}>
+        <Grid item style={{display: 'table', padding: '5%'}} align="center" xs={6}>
           <Controller />
         </Grid>
       </Grid>
