@@ -74,7 +74,7 @@ function createAccounts(accountCount, callback) {
   })
   // }
 
-  fs.appendFile('/Users/dennis.won/bnbridge.exchange/accounts/harmonyAccounts.txt', formatAccounts(accounts), function (err) {
+  fs.appendFile('/Users/dennis.won/native-bridge/accounts/harmonyAccounts.txt', formatAccounts(accounts), function (err) {
     if (err) {
       callback(err)
       return

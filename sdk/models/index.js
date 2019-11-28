@@ -2,6 +2,7 @@ const db = require('../helpers/db.js').db;
 const config = require('../config');
 const bnb = require('../helpers/bnb.js');
 const eth = require('../helpers/eth.js');
+const hmy = require('../helpers/hmy.js');
 const emailer = require('../helpers/emailer.js');
 const async = require('async');
 const generator = require('generate-password');
@@ -10,7 +11,7 @@ const sha256 = require('sha256');
 const bip39 = require('bip39');
 const algorithm = 'aes-256-ctr';
 
-const KEY = 'witness canyon foot sing song tray task defense float bottom town obvious faint globe door tonight alpha battle purse jazz flag author choose whisper';
+const KEY = process.env.ENCRYPTION_KEY
 
 const BNB_FUND_ACCT_PRIVATE_KEY = process.env.BNB_FUND_ACCT_PRIVATE_KEY
 const BNB_FOUNDATION_ACCT_ADDRESS = process.env.BNB_FOUNDATION_ACCT_ADDRESS
@@ -21,6 +22,11 @@ const ETH_FUND_ACCT_ADDRESS = process.env.ETH_FUND_ACCT_ADDRESS
 const ETH_FUND_ACCT_PRIVATE_KEY = process.env.ETH_FUND_ACCT_PRIVATE_KEY
 const ETH_FOUNDATION_ACCT_ADDRESS = process.env.ETH_FOUNDATION_ACCT_ADDRESS
 const ETH_GAS_FEE = 0.0005 // in ETH
+
+const HMY_FUND_ACCT_ADDRESS = process.env.HMY_FUND_ACCT_ADDRESS
+const HMY_FUND_ACCT_PRIVATE_KEY = process.env.HMY_FUND_ACCT_PRIVATE_KEY
+const HMY_FOUNDATION_ACCT_ADDRESS = process.env.HMY_FOUNDATION_ACCT_ADDRESS
+const HMY_GAS_FEE = 0.0005 // in ETH
 
 const models = {
 
@@ -455,7 +461,16 @@ const models = {
    *  Returns a list of tokens
    */
   getTokens(req, res, next) {
-    db.manyOrNone('select tok.uuid, tok.name, tok.symbol, tok.unique_symbol, tok.total_supply, tok.minimum_swap_amount, tok.fee_per_swap, tok.listed, tok.listing_proposed, tok.listing_proposal_uuid, tok.erc20_address, tok.process_date, tok.eth_to_bnb_enabled, tok.bnb_to_eth_enabled, eth.address as eth_address from tokens tok left join eth_accounts eth on eth.uuid = tok.eth_account_uuid where processed is true;')
+    db.manyOrNone(
+      'select' +
+      ' tok.uuid, tok.name, tok.symbol, tok.unique_symbol,' +
+      ' tok.total_supply, tok.minimum_swap_amount, tok.fee_per_swap,' +
+      ' tok.listed, tok.listing_proposed, tok.listing_proposal_uuid,' +
+      ' tok.erc20_address, tok.process_date, tok.eth_to_bnb_enabled, tok.bnb_to_eth_enabled,' +
+      ' eth.address as eth_address' +
+      ' from tokens tok left join eth_accounts eth' +
+      ' on eth.uuid = tok.eth_account_uuid' +
+      ' where processed is true;')
     .then((tokens) => {
       if (!tokens) {
         res.status(404)
@@ -559,6 +574,7 @@ const models = {
   */
   swapToken(req, res, next) {
     models.decryptPayload(req, res, next, (data) => {
+
       let result = models.validateSwap(data)
 
       if(result !== true) {
@@ -845,7 +861,7 @@ const models = {
           const ethTransactions = data[0]
           const swaps = data[1]
 
-          console.log(ethTransactions);
+          // console.log(ethTransactions);
 
           if(!ethTransactions || ethTransactions.length === 0) {
             res.status(400)
@@ -1158,30 +1174,30 @@ const models = {
             return next(null, req, res, next)
           }
 
-          let newTransactions = bnbTransactions.filter((bnbTransaction) => {
-            if (!bnbTransaction || bnbTransaction.value <= 0) {
-              return false
-            }
+          // let newTransactions = bnbTransactions.filter((bnbTransaction) => {
+          //   if (!bnbTransaction || bnbTransaction.value <= 0) {
+          //     return false
+          //   }
 
-            const thisTransaction = swaps.filter((swap) => {
-              return swap.deposit_transaction_hash === bnbTransaction.txHash
-            })
+          //   const thisTransaction = swaps.filter((swap) => {
+          //     return swap.deposit_transaction_hash === bnbTransaction.txHash
+          //   })
 
-            if (thisTransaction.length > 0) {
-              return false
-            } else {
-              return true
-            }
-          })
+          //   if (thisTransaction.length > 0) {
+          //     return false
+          //   } else {
+          //     return true
+          //   }
+          // })
 
-          if (newTransactions.length === 0) {
-            res.status(400)
-            res.body = { 'status': 400, 'success': false, 'result': 'Unable to find any new deposits' }
-            return next(null, req, res, next)
-          }
+          // if (newTransactions.length === 0) {
+          //   res.status(400)
+          //   res.body = { 'status': 400, 'success': false, 'result': 'Unable to find any new deposits' }
+          //   return next(null, req, res, next)
+          // }
 
           // choose only 1 at a time, because we have seen binance sdk txn failing when multiple txns are sent in parallel
-          newTransactions = newTransactions.slice(0, 1)
+          newTransactions = bnbTransactions.slice(0, 1) // newTransactions.slice(0, 1)
 
           models.insertSwaps(newTransactions, clientAccount, token_uuid, direction, (err, newSwaps) => {
             if (err) {
@@ -1211,7 +1227,8 @@ const models = {
 
   proccessSwapsB2E(swaps, tokenInfo, callback) {
 
-    models.getEthAccount(tokenInfo.eth_address, (err, address) => {
+    //models.getEthAccount(tokenInfo.eth_address, (err, address) => {
+    models.getHmyAccount(tokenInfo.hmy_address, (err, address) => {
       if(err || !address) {
         console.error(err)
         return callback(err)
@@ -1231,7 +1248,8 @@ const models = {
 
   processSwapB2E(swap, tokenInfo, address, callback) {
     async.series([
-      (callback) => { models.sendErc20Txn(swap, tokenInfo, address, callback) },
+      //(callback) => { models.sendErc20Txn(swap, tokenInfo, address, callback) },
+      (callback) => { models.sendNativeOneTxn(swap, tokenInfo, address, callback) },
       (callback) => { models.transferToBEP2Foundation(swap, tokenInfo, callback) }
     ], (err, [sendErc20TxnHash, transferToBEP2FoundationHash]) => {
         console.log(`processSwapB2E: [${sendErc20TxnHash}, ${transferToBEP2FoundationHash}]`);
@@ -1243,6 +1261,46 @@ const models = {
         }
 
         callback(null, sendErc20TxnHash);
+      })
+  },
+
+  sendNativeOneTxn(swap, tokenInfo, address, callback) {
+    hmy.sendTransaction(
+      address.private_key_decrypted,
+      swap.eth_address,
+      swap.amount, false /* earlyRet */, (err, resultHash) => {
+        if (err) {
+          return models.revertUpdateWithDepositTransactionHash(swap.uuid, (revertErr) => {
+            if (revertErr) {
+              console.error(revertErr)
+            }
+
+            let text = "BNBridge encountered an error processing a swap."
+
+            text += '\n\n*********************************************************'
+            text += '\nDirection: Binance To Ethereum'
+            text += '\nToken: ' + tokenInfo.name + ' (' + tokenInfo.symbol + ')'
+            text += '\nDeposit Hash: ' + swap.deposit_transaction_hash
+            text += '\nFrom: ' + swap.bnb_address
+            text += '\nTo: ' + swap.eth_address
+            text += '\nAmount: ' + swap.amount + ' ' + tokenInfo.symbol
+            text += '\n\nError Received: ' + err
+            text += '\n*********************************************************\n'
+
+            emailer.sendMail('BNBridge Error', text)
+            console.error(text, err);
+
+            return callback(err)
+          })
+        }
+
+        models.updateWithTransferTransactionHash(swap.uuid, resultHash, (err) => {
+          if (err) {
+            return callback(err)
+          }
+
+          callback(null, resultHash)
+        })
       })
   },
 
@@ -1406,6 +1464,22 @@ const models = {
     .catch(callback)
   },
 
+  getHmyAccount(hmyAddress, callback) {
+    db.oneOrNone('select * from hmy_accounts where address = $1;', [hmyAddress])
+      .then((address) => {
+        // console.log(address, 'KEY: ', KEY);
+        if (address.encr_key) {
+          const dbPassword = address.encr_key
+          const password = KEY + ':' + dbPassword
+          address.private_key_decrypted = models.decrypt(address.private_key, password)
+        } else {
+          address.private_key_decrypted = address.private_key
+        }
+        callback(null, address)
+      })
+      .catch(callback)
+  },
+
   revertUpdateWithDepositTransactionHash(uuid, callback) {
     db.none('update swaps set deposit_transaction_hash = null where uuid = $1 and transfer_transaction_hash is null;', [uuid])
     .then(callback)
@@ -1457,7 +1531,10 @@ const models = {
   },
 
   getTokenInfoForSwap(tokenUuid, callback) {
-    db.oneOrNone('select tok.uuid, tok.name, tok.symbol, tok.unique_symbol, tok.total_supply, tok.fee_per_swap, tok.minimum_swap_amount, tok.erc20_address, bnb.address as bnb_address, eth.address as eth_address from tokens tok left join bnb_accounts bnb on bnb.uuid = tok.bnb_account_uuid left join eth_accounts eth on eth.uuid = tok.eth_account_uuid where tok.uuid = $1;', [tokenUuid])
+    db.oneOrNone(
+      'select tok.uuid, tok.name, tok.symbol, tok.unique_symbol, tok.total_supply, tok.fee_per_swap, tok.minimum_swap_amount, tok.erc20_address, bnb.address as bnb_address, eth.address as eth_address, hmy.address as hmy_address' +
+      ' from tokens tok left join bnb_accounts bnb on bnb.uuid = tok.bnb_account_uuid left join eth_accounts eth on eth.uuid = tok.eth_account_uuid left join hmy_accounts hmy on hmy.uuid = tok.hmy_account_uuid' +
+      ' where tok.uuid = $1;', [tokenUuid])
     .then((response) => {
       callback(null, response)
     })
@@ -2158,7 +2235,8 @@ const models = {
           return next(null, req, res, next)
         }
 
-        eth.getERC20Balance(eth_address, tokenInfo.erc20_address, (err, balance) => {
+        //eth.getERC20Balance(eth_address, tokenInfo.erc20_address, (err, balance) => {
+        hmy.getBalance(eth_address, (err, balance) => {
           if(err) {
             console.error(err)
             res.status(500)
@@ -2167,7 +2245,7 @@ const models = {
           }
 
           const returnObj = {
-            balance: parseFloat(balance),
+            balance: balance,
           }
 
           res.status(205)

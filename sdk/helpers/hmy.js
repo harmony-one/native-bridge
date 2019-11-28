@@ -27,331 +27,267 @@ const harmony = new Harmony(
   },
 );
 
+const shardID = 0, toShardID = 0
+
 const hmy = {
-  createAccount(callback) {
-    let account = web3.eth.accounts.create()
-    callback(null, account)
+
+  async setSharding() {
+    // Harmony is a sharded blockchain, each endpoint have sharding structure,
+    // However sharding structure is different between mainnet, testnet and local testnet
+    // We need to get sharding info before doing cross-shard transaction
+    const res = await harmony.blockchain.getShardingStructure();
+    harmony.shardingStructures(res.result);
   },
 
-  getSentTransactionsForAddress(contractAddress, sourceAddress, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    return myContract.getPastEvents('Transfer', {
-      fromBlock: 8755198,
-      toBlock: 'latest',
-      filter: { _from: sourceAddress }
-    }).then((events) => {
-      const returnEvents = events.map((event) => {
-        return {
-          from: event.returnValues._from,
-          to: event.returnValues._to,
-          amount: parseFloat(web3.utils.fromWei(event.returnValues._value, 'ether')),
-          transactionHash: event.transactionHash
-        }
-      })
-
-      // console.log(returnEvents);
-      if (!callback) return
-      return callback(null, returnEvents)
-    }).catch((err) => {
-      console.error(err)
-      if (!callback) return
-      return callback(err)
-    });
-  },
-
-  getTransaction(contractAddress, txHash, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    myContract.getTransaction(txHash)
-      .then((txn) => {
-        return callback(null, txn)
-      })
-      .catch((err) => {
-        console.error(err)
-        callback(err, null)
-      });
-  },
-
-  getTransactionEvent(txHash) {
-    return new Promise((resolve, reject) => {
-      web3.eth.getTransactionReceipt(txHash)
-        .then((receipt) => {
-          resolve(abiDecoder.decodeLogs(receipt.logs)[0])
-        })
-        .catch((err) => {
-          console.error(err)
-          reject(err)
-        });
+  // get balance from shard 0 only
+  getBalance(address, callback) {
+    harmony.blockchain.getBalance({
+      address: address
     })
-  },
-
-  getTransactionsForAddress(contractAddress, depositAddress, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    myContract.getPastEvents('Transfer', {
-      fromBlock: 8698700, // first block number to search from, since around 10/09/2019 timepoint
-      toBlock: 'latest',
-      filter: { _to: depositAddress }
-    })
-      .then((events) => {
-        const returnEvents = events.map((event) => {
-          return {
-            from: event.returnValues._from,
-            to: event.returnValues._to,
-            amount: parseFloat(web3.utils.fromWei(event.returnValues._value, 'ether')),
-            transactionHash: event.transactionHash
-          }
-        })
-        return callback(null, returnEvents)
-      })
-      .catch((err) => {
-        console.error(err)
-        callback(err, null)
-      });
-  },
-
-  getTransactions(contractAddress, accountAddress, depositAddress, depositAmount, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    myContract.getPastEvents('Transfer', {
-      fromBlock: 0,
-      toBlock: 'latest',
-      filter: { _to: depositAddress, _from: accountAddress }
-    })
-      .then((events) => {
-        let returnEvents = events.filter((event) => {
-          if (event.returnValues._from.toUpperCase() == accountAddress.toUpperCase() && event.returnValues._to.toUpperCase() == depositAddress.toUpperCase()) {
-            let amount = parseFloat(web3.utils.fromWei(event.returnValues._value, 'ether'))
-            return depositAmount == amount
-          }
-        })
-        callback(null, returnEvents)
-      })
-      .catch((err) => {
-        callback(err)
-      });
-
-  },
-
-  getERC20Balance(address, contractAddress, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    myContract.methods.balanceOf(address).call({ from: CONTRACT_MANAGER })
       .then((balance) => {
-        // console.log(balance);
-        const theBalance = web3.utils.fromWei(balance.toString(), 'ether')
-
-        callback(null, theBalance)
+        const balanceInOne = harmony.utils.hexToNumber(balance.result) / 1e18
+        callback(null, balanceInOne);
       })
-      .catch(callback)
+      .catch(callback);
   },
 
-  getERC20Symbol(contractAddress, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
+  async transfer(privateKey, mnemonic, to, amount, callback) {
+    // either privateKey or mnemonic required
+    const sender = privateKey
+      ? harmony.wallet.addByPrivateKey(privateKey)
+      : harmony.wallet.addByMnemonic(mnemonic);
 
-    myContract.methods.symbol().call({ from: contractAddress })
-      .then((symbol) => {
-        // console.log(symbol);
-        callback(null, symbol)
+    if (shardID != toShardID) {
+      // run set sharding first, if you want to make a cross-shard transaction
+      await setSharding();
+    }
+
+    // acmount converted to big
+    // use Unit class as Gwei, then toWei(), which will be transformed to BN
+    const amountBig = new harmony.utils.Unit((amount * 1e9).toString()).asGwei().toWei();
+
+    const gasLimit = '210000'
+    const gasPriceInGwei = '100'
+
+    // construct transaction object with correct unit and format
+    const txn = harmony.transactions.newTx({
+      //  token send to
+      to: to,
+      // amount to send in BigNumber
+      value: amountBig,
+      // gas limit, you can use string
+      gasLimit: gasLimit,
+      // send token from shardID
+      shardID: shardID,
+      // send token to toShardID
+      toShardID: toShardID,
+      // gas Price, unit in wei, in BigNumber
+      gasPrice: new harmony.utils.Unit(gasPriceInGwei).asGwei().toWei(),
+    });
+
+    // sign the transaction use wallet;
+    const signedTxn = await harmony.wallet.signTransaction(txn);
+
+    // Now you can use `Transaction.observed()` to listen events
+
+    // Frontend received back the signedTxn and do the followings to Send transaction.
+    signedTxn
+      .observed()
+      .on('transactionHash', (txnHash) => {
+        console.log('');
+        console.log('--- hash ---');
+        console.log('');
+        console.log(txnHash);
+        console.log('');
       })
-      .catch(callback)
+      .on('receipt', (receipt) => {
+        console.log('');
+        console.log('--- receipt ---');
+        console.log('');
+        console.log(receipt);
+        console.log('');
+      })
+      .on('cxReceipt', (receipt) => {
+        console.log('');
+        console.log('--- cxReceipt ---');
+        console.log('');
+        console.log(receipt);
+        console.log('');
+      })
+      .on('error', (error) => {
+        console.log('');
+        console.log('--- error ---');
+        console.log('');
+        console.log(error);
+        console.log('');
+
+        callback(error)
+      });
+
+    // send the txn, get [Transaction, transactionHash] as result
+
+    const [sentTxn, txnHash] = await signedTxn.sendTransaction();
+
+    // to confirm the result if it is already there
+
+    const confiremdTxn = await sentTxn.confirm(txnHash);
+
+    // if the transactino is cross-shard transaction
+    if (!confiremdTxn.isCrossShard()) {
+      if (confiremdTxn.isConfirmed()) {
+        console.log('--- Result ---');
+        console.log('');
+        console.log('Normal transaction');
+        console.log(`${txnHash} is confirmed`);
+        console.log('');
+
+        callback(null, txnHash);
+      }
+    }
+    if (confiremdTxn.isConfirmed() && confiremdTxn.isCxConfirmed()) {
+      console.log('--- Result ---');
+      console.log('');
+      console.log('Cross-Shard transaction');
+      console.log(`${txnHash} is confirmed`);
+      console.log('');
+
+      callback(null, txnHash);
+    }
   },
 
-  getERC20Name(contractAddress, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    myContract.methods.name().call({ from: contractAddress })
-      .then((name) => {
-        // console.log(name);
-        callback(null, name)
-      })
-      .catch(callback)
-  },
-
-  getERC20TotalSupply(contractAddress, callback) {
-    let myContract = new web3.eth.Contract(config.erc20ABI, contractAddress)
-
-    myContract.methods.totalSupply().call({ from: contractAddress })
-      .then((supply) => {
-        if (!supply) {
-          return callback(null, null)
-        }
-
-        // console.log(supply);
-        const theSupply = web3.utils.fromWei(supply.toString(), 'ether')
-        callback(null, theSupply)
-      })
-      .catch(callback)
-  },
-
-  async sendErc20Transaction(contractAddress, privateKey, from, to, amount, earlyRet, callback) {
+  async sendTransaction(privateKey, to, amount, earlyRet, callback) {
     let retry = 0;
     let callbackCalled = false;
 
     while (true) {
-      const sendAmount = web3.utils.toWei(amount.toString(), 'ether')
-      const consumerContract = new web3.eth.Contract(config.erc20ABI, contractAddress);
-      const myData = consumerContract.methods.transfer(to, sendAmount).encodeABI();
+      // either privateKey or mnemonic required
+      const sender = privateKey
+        ? harmony.wallet.addByPrivateKey(privateKey)
+        : harmony.wallet.addByMnemonic(mnemonic);
 
-      const gasLimit = ETH_TX_GAS_LIMIT;
-
-      const nonce = await web3.eth.getTransactionCount(from, 'pending');
-      let gasPrice = await web3.eth.getGasPrice();
-      gasPrice = Math.max(ETH_TX_GAS_PRICE_GWEI * 1e9, gasPrice * 2 * (retry+1))  // speed up erc20 txn a bit
-
-      const tx = {
-        from,
-        to: contractAddress,
-
-        gasPrice: web3.utils.toHex(gasPrice),
-        gasLimit: web3.utils.toHex(gasLimit),
-        value: '0x0',
-
-        chainId: 1,
-        nonce: nonce,
-        data: myData
+      if (shardID != toShardID) {
+        // run set sharding first, if you want to make a cross-shard transaction
+        await setSharding();
       }
 
-      console.log(`Sending ERC20 transaction (retry num: ${retry})`, tx);
+      // acmount converted to big
+      // use Unit class as Gwei, then toWei(), which will be transformed to BN
+      const amountBig = new harmony.utils.Unit((amount * 1e9).toString()).asGwei().toWei();
 
-      const rawTx = new Tx.Transaction(tx, { chain: 'mainnet', hardfork: 'petersburg' });
-      const privKey = Buffer.from(privateKey, 'hex');
-      rawTx.sign(privKey);
+      const gasLimit = '210000'
+      const gasPriceInGwei = '100'
 
-      const serializedTx = rawTx.serialize();
-      const tx_hash = '0x' + rawTx.hash().toString('hex');
+      // construct transaction object with correct unit and format
+      const txn = harmony.transactions.newTx({
+        //  token send to
+        to: to,
+        // amount to send in BigNumber
+        value: amountBig,
+        // gas limit, you can use string
+        gasLimit: gasLimit,
+        // send token from shardID
+        shardID: shardID,
+        // send token to toShardID
+        toShardID: toShardID,
+        // gas Price, unit in wei, in BigNumber
+        gasPrice: new harmony.utils.Unit(gasPriceInGwei).asGwei().toWei(),
+      });
 
-      console.log(`Attempting to send signed tx ${tx_hash}: ${serializedTx.toString('hex')}\n------------------------`);
+      console.log(`Sending native ONE transaction (retry num: ${retry})`, txn);
+
+      // sign the transaction use wallet;
+      const signedTxn = await harmony.wallet.signTransaction(txn);
+
+      // Now you can use `Transaction.observed()` to listen events
+
+      // Frontend received back the signedTxn and do the followings to Send transaction.
+      signedTxn
+        .observed()
+        .on('transactionHash', (txnHash) => {
+          console.log('');
+          console.log('--- hash ---');
+          console.log('');
+          console.log(txnHash);
+          console.log('');
+        })
+        .on('receipt', (receipt) => {
+          console.log('');
+          console.log('--- receipt ---');
+          console.log('');
+          console.log(receipt);
+          console.log('');
+        })
+        .on('cxReceipt', (receipt) => {
+          console.log('');
+          console.log('--- cxReceipt ---');
+          console.log('');
+          console.log(receipt);
+          console.log('');
+        })
+        .on('error', (error) => {
+          console.log('');
+          console.log('--- error ---');
+          console.log('');
+          console.log(error);
+          console.log('');
+
+          callback(error)
+        });
+
+      console.log(`Attempting to send signed tx\n------------------------`);
 
       try {
-        const receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex')).
-          on('transactionHash', txHash => {
-            console.log('transactionHash:', txHash)
-            if (earlyRet) {
-              console.log('sendErc20Transaction: early returning with transactionHash', txHash)
-              if (!callbackCalled) {
-                callback(null, txHash)
-                callbackCalled = true
-              }
-              return null, txHash
-            }
-          });
+        // send the txn, get [Transaction, transactionHash] as result
+        const [sentTxn, txnHash] = await signedTxn.sendTransaction();
 
-        // not early return since we await above (tx hash callback should be called before receipt is available)
-        console.log('sendErc20Transaction: transaction receipt', receipt)
-        if (!callbackCalled) {
-          callback(null, receipt.transactionHash)
-          callbackCalled = true
+        // to confirm the result if it is already there
+        const confiremdTxn = await sentTxn.confirm(txnHash);
+
+        // if the transaction is cross-shard transaction
+        if (!confiremdTxn.isCrossShard()) {
+          if (confiremdTxn.isConfirmed()) {
+            console.log('--- Result ---');
+            console.log('');
+            console.log('Normal transaction');
+            console.log(`${txnHash} is confirmed`);
+            console.log('');
+
+            if (!callbackCalled) {
+              callback(null, txnHash);
+              callbackCalled = true
+            }
+          }
         }
-        return null, receipt.transactionHash
+        if (confiremdTxn.isConfirmed() && confiremdTxn.isCxConfirmed()) {
+          console.log('--- Result ---');
+          console.log('');
+          console.log('Cross-Shard transaction');
+          console.log(`${txnHash} is confirmed`);
+          console.log('');
+
+          if (!callbackCalled) {
+            callback(null, txnHash);
+            callbackCalled = true
+          }
+        }
+
+        return null, txnHash
       } catch (err) {
-        console.error('[Error] sendErc20Transaction', err)
+        console.error('[Error] sendTransaction', err)
         if (retry == 2) {
           if (!callbackCalled) {
             callback(err)
             callbackCalled = true
           }
-          return err, tx_hash
+          return err, null
         } else {
           retry++;
-          console.log(`Retrying erc20 tx... ${retry}`)
+          console.log(`Retrying native ONE tx... ${retry}`)
         }
       }
     }
 
   },
-
-  async fundEthForGasFee(privateKey, from, to, amount, message, earlyRet, callback) {
-    let retry = 0;
-    let callbackCalled = false;
-
-    while (true) {
-      const sendAmount = web3.utils.toWei(amount.toString(), 'ether')
-
-      const gasLimit = ETH_TX_GAS_LIMIT;
-
-      const nonce = await web3.eth.getTransactionCount(from, 'pending');
-      const gasPrice = await web3.eth.getGasPrice();
-
-      const tx = {
-        from,
-        to,
-
-        gasPrice: web3.utils.toHex(gasPrice),
-        gasLimit: web3.utils.toHex(gasLimit),
-        value: web3.utils.toHex(sendAmount),
-
-        chainId: 1,
-        nonce: nonce,
-      }
-      if (message) {
-        tx.data = web3.utils.toHex(message);
-      }
-
-      console.log(`Sending ETH transaction (retry num: ${retry})`, tx);
-
-      const rawTx = new Tx.Transaction(tx, { chain: 'mainnet', hardfork: 'petersburg' });
-      const privKey = Buffer.from(privateKey, 'hex');
-      rawTx.sign(privKey);
-      const serializedTx = rawTx.serialize();
-      const tx_hash = '0x' + rawTx.hash().toString('hex');
-
-      console.log(`Attempting to send signed tx ${tx_hash}: ${serializedTx.toString('hex')}\n------------------------`);
-
-      try {
-        const receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex')).
-          on('transactionHash', txHash => {
-            console.log('transactionHash:', txHash)
-            if (earlyRet) {
-              console.log('fundEthForGasFee: early returning with transactionHash', txHash)
-              if (!callbackCalled) {
-                callback(null, txHash)
-                callbackCalled = true
-              }
-              return null, txHash
-            }
-          });
-
-        // not early return since we await above (tx hash callback should be called before receipt is available)
-        console.log('fundEthForGasFee: transaction receipt', receipt)
-        if (!callbackCalled) {
-          callback(null, receipt.transactionHash)
-          callbackCalled = true
-        }
-        return null, receipt.transactionHash
-      } catch (err) {
-        if (retry == 2) {
-          if (!callbackCalled) {
-            callback(err)
-            callbackCalled = true
-          }
-          return err, tx_hash
-        } else {
-          retry++;
-          console.log(`Retrying funding eth gas ... ${retry}`)
-        }
-      }
-    }
-
-  },
-
-  generateAddressesFromSeed(mnemonic, count) {
-    const seed = bip39.mnemonicToSeedSync(mnemonic);
-    const hdwallet = hdkey.fromMasterSeed(seed);
-
-    const wallet_hdpath = "m/44'/60'/0'/0/";
-
-    const accounts = [];
-    for (let i = 0; i < count; i++) {
-      const wallet = hdwallet.derivePath(wallet_hdpath + i).getWallet();
-      const address = '0x' + wallet.getAddress().toString("hex");
-      const privateKey = wallet.getPrivateKey().toString("hex");
-      accounts.push({ address: address, privateKey: privateKey });
-    }
-
-    return accounts;
-  }
 }
 
 module.exports = hmy

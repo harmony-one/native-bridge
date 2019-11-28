@@ -11,7 +11,7 @@ var ptyProcess = pty.spawn(shell, [], {
   env: process.env
 });
 
-const PATH = process.env.HOME + "/bnbridge.exchange/cli/node-binary/"
+const PATH = process.env.HOME + "/native-bridge/cli/node-binary/"
 const FILE = "tbnbcli"
 
 exports.ptyProcess = ptyProcess

@@ -8,7 +8,7 @@ const config = {
 
 	//Binance
 	api: "https://dex.binance.org/", //live
-	filePath: process.env.HOME + "/bnbridge.exchange/cli/node-binary/", //live
+	filePath: process.env.HOME + "/native-bridge/cli/node-binary/", //live
 	fileName: "bnbcli", //live
 	chainID: "Binance-Chain-Tigris", //live
 	nodeData: "https://dataseed5.defibit.io:443", //live

@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS "public"."client_accounts_bnb";
 CREATE TABLE "public"."client_accounts_bnb" (
   "uuid" char(36) NOT NULL,
   "bnb_address" varchar(64),
+  "bnb_memo" char(9),
   "client_eth_account_uuid" char(36),
   "created" timestamp(6)
 )
@@ -68,6 +69,17 @@ CREATE TABLE "public"."eth_accounts" (
 WITH (OIDS=FALSE);
 GRANT ALL PRIVILEGES ON TABLE "public"."eth_accounts" TO bnbridge;
 
+DROP TABLE IF EXISTS "public"."hmy_accounts";
+CREATE TABLE "public"."hmy_accounts" (
+  "uuid" char(36) NOT NULL,
+  "private_key" text,
+  "address" varchar(64),
+  "created" timestamp(6),
+  "encr_key" text
+)
+WITH (OIDS=FALSE);
+GRANT ALL PRIVILEGES ON TABLE "public"."hmy_accounts" TO bnbridge;
+
 DROP TABLE IF EXISTS "public"."list_proposals";
 CREATE TABLE "public"."list_proposals" (
   "uuid" char(36) NOT NULL,
@@ -94,6 +106,7 @@ CREATE TABLE "public"."swaps" (
   "token_uuid" char(36),
   "eth_address" varchar(64),
   "bnb_address" varchar(64),
+  "bnb_memo" char(9),
   "amount" varchar(32),
   "deposit_transaction_hash" varchar(128),
   "transfer_transaction_hash" varchar(128),
@@ -115,6 +128,7 @@ CREATE TABLE "public"."tokens" (
   "erc20_address" varchar(64),
   "eth_account_uuid" char(36),
   "bnb_account_uuid" char(36),
+  "hmy_account_uuid" char(36),
   "processed" bool,
   "listing_proposed" bool,
   "listing_proposal_uuid" char(36),
@@ -130,6 +144,9 @@ CREATE TABLE "public"."tokens" (
 WITH (OIDS=FALSE);
 GRANT ALL PRIVILEGES ON TABLE "public"."tokens" TO bnbridge;
 
+GRANT ALL PRIVILEGES ON DATABASE harmonyone TO bnbridge;
+GRANT ALL PRIVILEGES ON SCHEMA public TO bnbridge;
+
 ALTER TABLE "public"."bnb_accounts" ADD PRIMARY KEY ("uuid");
 
 ALTER TABLE "public"."client_accounts_bnb" ADD PRIMARY KEY ("uuid");
@@ -141,6 +158,8 @@ ALTER TABLE "public"."client_bnb_accounts" ADD PRIMARY KEY ("uuid");
 ALTER TABLE "public"."client_eth_accounts" ADD PRIMARY KEY ("uuid");
 
 ALTER TABLE "public"."eth_accounts" ADD PRIMARY KEY ("uuid");
+
+ALTER TABLE "public"."hmy_accounts" ADD PRIMARY KEY ("uuid");
 
 ALTER TABLE "public"."list_proposals" ADD PRIMARY KEY ("uuid");
 

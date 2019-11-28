@@ -16,7 +16,7 @@ const ERC20_CONTRACT = '0x799a4202c12ca952cb311598a024c80ed371a41e'
 loadFile()
 
 function loadFile() {
-  var text = fs.readFileSync('/Users/dennis.won/bnbridge.exchange/accounts/harmonyAccounts_final.txt','utf8')
+  var text = fs.readFileSync('/Users/dennis.won/native-bridge/accounts/harmonyAccounts_final.txt','utf8')
   processFile(text)
 }
 
