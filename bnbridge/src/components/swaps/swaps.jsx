@@ -243,18 +243,18 @@ class Swaps extends Component {
           depositHash = swap.deposit_transaction_hash;
           depositLink = "https://explorer.binance.org/tx/" + swap.deposit_transaction_hash;
           receiveHash = swap.transfer_transaction_hash;
-          receiveLink = "https://etherscan.io/tx/" + swap.transfer_transaction_hash;
-          direction = 'B2E';
+          receiveLink = "https://explorer.harmony.one/#/tx/" + swap.transfer_transaction_hash;
+          direction = 'BNB > ONE'; //'B2E';
         } else {
           from = swap.eth_address;
           fromLink = `https://etherscan.io/address/${swap.eth_address}#tokentxns`
           to = swap.bnb_address;
           toLink = `https://explorer.binance.org/address/${swap.bnb_address}`
           depositHash = swap.deposit_transaction_hash;
-          depositLink = "https://etherscan.io/tx/" + swap.deposit_transaction_hash;
+          depositLink = "https://explorer.harmony.one/#/tx/" + swap.deposit_transaction_hash;
           receiveHash = swap.transfer_transaction_hash;
           receiveLink = "https://explorer.binance.org/tx/" + swap.transfer_transaction_hash;
-          direction = 'E2B';
+          direction = 'ONE > BNB';
         }
 
         const timetokens = swap.created.split('T');

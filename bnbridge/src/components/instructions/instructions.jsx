@@ -118,15 +118,12 @@ class Instructions extends Component {
         display="table">
         <Grid style={{ display: 'table', }} item xs={12} align='left'>
           <div style={{ display: 'table', }} className={classes.root} >
-            <Typography className={classes.header} style={{ marginTop: '8rem' }}>With bnbridge you can:</Typography>
-            <li><Typography className={classes.action}>Swap from BEP2 to native ONE</Typography></li>
-              <div style={{  margin: '30px', marginTop: '50px' }} />
+            <Typography className={classes.header} style={{ marginTop: '0rem' }}>Native One Bridge</Typography>
+            <Typography className={classes.action}>Swap from BEP2 to native ONE</Typography>
+              <div style={{  margin: '10px', marginTop: '10px' }} />
               <Typography className={classes.action2}>
                 Please contact <a href="mailto:hello@harmony.one" target="_blank" rel="noopener noreferrer">Harmony team</a> for any additional support
               </Typography>
-            <Typography className={classes.action2}>
-              Note: UI of this page is not optimized for mobile experience.
-            </Typography>
           </div>
         </Grid>
       </Grid>

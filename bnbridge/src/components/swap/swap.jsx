@@ -359,9 +359,9 @@ class Swap extends Component {
     } = this.state
 
     if(swapDirection === 'EthereumToBinance') {
-      window.open(config.etherscanURL+hash, "_blank")
+      window.open(config.hmyExplorerURL+hash, "_blank")
     } else {
-      window.open(config.explorerURL+hash, "_blank")
+      window.open(config.bnbExplorerURL+hash, "_blank")
     }
   };
 

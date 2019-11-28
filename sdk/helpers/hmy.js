@@ -177,8 +177,7 @@ const hmy = {
       const gasLimit = '210000'
       const gasPriceInGwei = '100'
 
-      // construct transaction object with correct unit and format
-      const txn = harmony.transactions.newTx({
+      const txnData = {
         //  token send to
         to: to,
         // amount to send in BigNumber
@@ -191,9 +190,12 @@ const hmy = {
         toShardID: toShardID,
         // gas Price, unit in wei, in BigNumber
         gasPrice: new harmony.utils.Unit(gasPriceInGwei).asGwei().toWei(),
-      });
+      };
 
-      console.log(`Sending native ONE transaction (retry num: ${retry})`, txn);
+      // construct transaction object with correct unit and format
+      const txn = harmony.transactions.newTx(txnData);
+
+      console.log(`Sending native ONE transaction (retry num: ${retry})`, txnData);
 
       // sign the transaction use wallet;
       const signedTxn = await harmony.wallet.signTransaction(txn);
