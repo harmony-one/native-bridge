@@ -136,11 +136,18 @@ function SwapIcon(props) {
 
 
 class Swap extends Component {
+  constructor(props) {
+    super(props)    
+    this.onSwapDirectionClick = this.onSwapDirectionClick.bind(this)
+  }
+
   state = {
     loading: false,
     page: 0,
     token: '',
     tokenError: false,
+    bnbMemo: '',
+    bnbMemoError: false,
     bnbReceiveAddress: '',
     bnbReceiveAddressError: false,
     ethReceiveAddress: '',
@@ -149,7 +156,8 @@ class Swap extends Component {
     selectedToken: null,
     bnbBalances: null,
     ethBalances: null,
-    swapDirection: 'BinanceToEthereum'
+    swapDirection: 'BinanceToEthereum',
+    swapDir: 'Bep2ToOne'
   };
 
   componentDidMount() {
@@ -214,6 +222,7 @@ class Swap extends Component {
     const {
       token,
       swapDirection,
+      bnbMemo,
       bnbReceiveAddress,
       ethReceiveAddress
     } = this.state
@@ -221,6 +230,7 @@ class Swap extends Component {
     const content =  {
       token_uuid: token,
       direction: swapDirection,
+      bnb_memo: bnbMemo,
       bnb_address: bnbReceiveAddress,
       eth_address: ethReceiveAddress,
     }
@@ -251,6 +261,7 @@ class Swap extends Component {
 
     this.setState({
       tokenError: false,
+      bnbMemoError: false,
       bnbReceiveAddressError: false,
       ethReceiveAddressError: false,
     })
@@ -258,6 +269,7 @@ class Swap extends Component {
     const {
       token,
       swapDirection,
+      bnbMemo,
       bnbReceiveAddress,
       ethReceiveAddress,
     } = this.state
@@ -310,6 +322,12 @@ class Swap extends Component {
 
     let direction = swapDirection==='EthereumToBinance'?'BinanceToEthereum':'EthereumToBinance'
 
+    if (direction === 'BinanceToEthereum') {
+      this.props.changeSwapDir('Bep2ToOne')
+    } else if (direction === 'EthereumToBinance') {
+      this.props.changeSwapDir('OneToBep2')
+    }
+
     if(selectedToken){
 
       let eth_to_bnb_enabled = selectedToken.eth_to_bnb_enabled;
@@ -326,6 +344,7 @@ class Swap extends Component {
 
     this.setState({
       swapDirection: direction,
+      bnbMemo: '',
       ethReceiveAddress: '',
       bnbReceiveAddress: '',
       ethBalances: null,
@@ -338,6 +357,8 @@ class Swap extends Component {
       page: 0,
       token: '',
       tokenError: false,
+      bnbMemo: '',
+      bnbMemoError: '',
       bnbReceiveAddress: '',
       bnbReceiveAddressError: false,
       ethReceiveAddress: '',
@@ -492,6 +513,8 @@ class Swap extends Component {
   renderPage0 = () => {
 
     const {
+      bnbMemo,
+      bnbMemoError,
       bnbReceiveAddress,
       bnbReceiveAddressError,
       ethReceiveAddress,
@@ -529,6 +552,16 @@ class Swap extends Component {
                   placeholder="eg: bnb1mmxvnhkyqrvd2dpskvsgl8lmft4tnrcs97apr3"
                   value={ bnbReceiveAddress }
                   error={ bnbReceiveAddressError }
+                  onChange={ this.onChange }
+                  disabled={ loading }
+                />
+                <Input 
+                  id='bnbMemo'         
+                  fullWidth={ true }
+                  label="Deposit Memo (required for binance.com account)"
+                  placeholder="eg: 107800300"
+                  value={ bnbMemo }
+                  error={ bnbMemoError }
                   onChange={ this.onChange }
                   disabled={ loading }
                 />
@@ -644,6 +677,7 @@ class Swap extends Component {
     const {
       transactions,
       selectedToken,
+      bnbMemo,
       bnbReceiveAddress,
       ethReceiveAddress,
       swapDirection
@@ -780,7 +814,8 @@ class Swap extends Component {
 }
 
 Swap.propTypes = {
-  classes: PropTypes.object.isRequired
+  classes: PropTypes.object.isRequired,
+  changeSwapDir: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(Swap);
