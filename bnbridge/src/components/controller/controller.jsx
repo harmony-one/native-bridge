@@ -144,7 +144,7 @@ class Controller extends Component {
         <Tabs value={tabValue} onChange={this.handleChange} className={ classes.tabs } variant="fullWidth" indicatorColor="primary" textColor="inherit">
           <Tab style={{fontSize: '20px'}} label="Swap" />
         </Tabs>
-        {tabValue === 0 && <Swap onIssue={ this.onIssue } showError={ this.showError } onCreateAccount={ this.onCreateAccount } />}
+        {tabValue === 0 && <Swap changeSwapDir={this.props.changeSwapDir} onIssue={ this.onIssue } showError={ this.showError } onCreateAccount={ this.onCreateAccount } />}
         {tabValue === 1 && <List onIssue={ this.onIssue } showError={ this.showError } />}
         {tabValue === 2 && <Issue onBack={ this.onIssueBack }  issueFee={ issueFee } showError={ this.showError } />}
       </React.Fragment>
@@ -154,6 +154,7 @@ class Controller extends Component {
 
 Controller.propTypes = {
   classes: PropTypes.object.isRequired,
+  changeSwapDir: PropTypes.func.isRequired,
 };
 
 export default withStyles(styles)(Controller);

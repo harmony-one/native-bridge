@@ -3,7 +3,8 @@ import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import {
   Typography,
-  Grid
+  Grid,
+  Link
 } from '@material-ui/core';
 import { colors } from '../../theme'
 
@@ -30,6 +31,18 @@ const styles = theme => ({
   action: {
     fontSize: '1rem',
     color: colors.lightBlack,
+    display: 'inline-block',
+    marginTop: "0.5rem"
+  },
+  actionHighlight: {
+    fontSize: '0.9rem',
+    color: '#000000',
+    display: 'inline-block',
+    marginTop: "0.5rem"  
+  },
+  actionLink: {
+    fontSize: '0.9rem',
+    color: '#2196f3',
     display: 'inline-block',
     marginTop: "0.5rem"
   },
@@ -106,7 +119,7 @@ class Instructions extends Component {
     })
   };
 
-  render() {
+  renderBep2ToOne() {
     const {
       classes
     } = this.props;
@@ -117,18 +130,58 @@ class Instructions extends Component {
         justify="flex-start"
         display="table">
         <Grid style={{ display: 'table', }} item xs={12} align='left'>
-          <div style={{ display: 'table', }} className={classes.root} >
-            <Typography className={classes.header} style={{ marginTop: '0rem' }}>Native One Bridge</Typography>
-            <Typography className={classes.action}>Swap from BEP2 to native ONE</Typography>
-              <div style={{  margin: '10px', marginTop: '10px' }} />
-              <Typography className={classes.action2}>
-                Please contact <a href="mailto:hello@harmony.one" target="_blank" rel="noopener noreferrer">Harmony team</a> for any additional support
-              </Typography>
+          <div style={{ display: 'table', }} className={classes.root}>
+            <Typography className={classes.header} style={{ marginTop: '10px' }}>With bnbridge you can:</Typography>
+            <li><Typography className={classes.action}>Swap between ONE and BEP2 tokens</Typography></li>
           </div>
         </Grid>
       </Grid>
     )
   };
+
+  renderOneToBep2() {
+    const {
+      classes
+    } = this.props;
+
+    return (
+      <Grid
+        container
+        justify="flex-start"
+        display="table">
+        <Grid style={{ display: 'table', }} item xs={12} align='left'>
+          <div style={{ display: 'table', }} className={classes.root}>
+            <Typography className={classes.header} style={{ marginTop: '70px' }}>With bnbridge you can:</Typography>
+            <li><Typography className={classes.action}>Swap between ONE and BEP2 tokens</Typography></li>
+          </div>
+          <div>
+            <Typography className={classes.actionHighlight}>
+              If you are using a binance.com account, your 9 digit ONE deposit memo is required in addition to your ONE address.
+              <br/>
+              <Link href="https://www.binance.vision/tutorials/how-to-deposit">
+                <Typography className={classes.actionLink}> How to find your deposit MEMO?</Typography>
+              </Link>   
+            </Typography>
+            <img src={ require('../../assets/images/MEMO_Example.png')} style={{width: '80%'}} alt="Nature"></img>
+          </div>
+        </Grid>
+      </Grid>
+    )
+  };
+
+  render() {
+    const {
+      classes,
+      swapDir
+    } = this.props;
+
+    return (
+      <Grid container className={ classes.root }>
+          { swapDir === 'Bep2ToOne' && this.renderBep2ToOne() }
+          { swapDir === 'OneToBep2' && this.renderOneToBep2() }
+      </Grid>
+    )
+  }
 
   renderFees = () => {
     const {
@@ -151,7 +204,7 @@ class Instructions extends Component {
         </React.Fragment>
       )
     })
-  }
+  };
 }
 
 Instructions.propTypes = {
