@@ -12,7 +12,7 @@
     "@binance-chain/javascript-sdk": "^2.16.1",
     "abi-decoder": "^2.2.2",
     "async": "^3.1.0",
-    "axios": "^0.18.1",
+    "axios": "^0.21.1",
     "csv-parser": "^2.3.2",
     "dotenv": "^8.2.0",
     "ethereumjs-tx": "^2.1.1",
