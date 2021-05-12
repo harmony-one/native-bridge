@@ -32,7 +32,7 @@
     "morgan": "^1.9.1",
     "node-pty": "^0.8.1",
     "node-rest-client-promise": "^3.1.1",
-    "nodemailer": "^6.3.1",
+    "nodemailer": "^6.4.16",
     "path": "^0.12.7",
     "pg-promise": "^8.7.5",
     "promise.series": "^0.2.0",
